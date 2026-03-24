@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HealthFare Videos</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      font-family: Arial;
+    }
+
+    /* TOP SCROLLING TEXT BAR */
+    .ticker {
+      width: 100%;
+      overflow: hidden;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      height: 60px;
+      display: flex;
+      align-items: center;
+    }
+
+    .ticker-text {
+      white-space: nowrap;
+      font-size: 22px;
+      font-weight: bold;
+      color: #111;
+      animation: scrollText 20s linear infinite;
+    }
+
+    @keyframes scrollText {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* VIDEO */
+    video {
+      width: 80%;
+      display: block;
+      margin: 30px auto;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- 🔥 SCROLLING TEXT -->
+<div class="ticker">
+  <div class="ticker-text" id="tickerText"></div>
+</div>
+
+<!-- 🎥 VIDEO PLAYER -->
+<video id="player" controls autoplay></video>
+
+<script>
+/* =========================
+   LOAD MESSAGE FROM FILE
+========================= */
+fetch("message.txt")
+  .then(res => res.text())
+  .then(text => {
+    document.getElementById("tickerText").innerText = text;
+  });
+
+/* =========================
+   VIDEO PLAYLIST FROM CSV
+========================= */
+const player = document.getElementById("player");
+
+let videos = [];
+let index = 0;
+
+fetch("links.csv")
+  .then(res => res.text())
+  .then(data => {
+    const lines = data.split("\n").slice(1);
+    videos = lines.map(l => l.trim()).filter(l => l !== "");
+    playVideo(0);
+  });
+
+function playVideo(i) {
+  player.src = videos[i];
+  player.play();
+}
+
+player.addEventListener("ended", () => {
+  index = (index + 1) % videos.length;
+  playVideo(index);
+});
+</script>
+
+</body>
+</html>
