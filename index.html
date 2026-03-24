@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,11 +27,13 @@
       font-size: 22px;
       font-weight: bold;
       color: #111;
-      animation: scrollText 40s linear infinite;
+      display: inline-block;
+      padding-left: 100%;
+      animation: scrollText 60s linear infinite;
     }
 
     @keyframes scrollText {
-      0% { transform: translateX(100%); }
+      0% { transform: translateX(0); }
       100% { transform: translateX(-100%); }
     }
 
@@ -50,14 +53,16 @@
   <div class="ticker-text" id="tickerText"></div>
 </div>
 
-<video id="player" controls autoplay></video>
+<video id="player" controls autoplay muted></video>
 
 <script>
 /* LOAD MESSAGE */
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
-    document.getElementById("tickerText").innerText = text;
+    const clean = text.trim();
+    // duplicate text so it loops smoothly
+    document.getElementById("tickerText").innerText = clean + " • " + clean + " • " + clean;
   });
 
 /* VIDEO PLAYLIST */
@@ -69,11 +74,11 @@ let index = 0;
 fetch("links.csv")
   .then(res => res.text())
   .then(data => {
-    const lines = data.split("\n").slice(1);
+    const lines = data.split(/\r?\n/).slice(1);
 
     videos = lines
       .map(l => l.replace(/\r/g, "").trim())
-      .filter(l => l !== "");
+      .filter(l => l.startsWith("http"));
 
     if (videos.length > 0) {
       playVideo(0);
@@ -82,7 +87,8 @@ fetch("links.csv")
 
 function playVideo(i) {
   player.src = videos[i];
-  player.play();
+  player.load();
+  player.play().catch(() => {});
 }
 
 player.addEventListener("ended", () => {
@@ -93,3 +99,4 @@ player.addEventListener("ended", () => {
 
 </body>
 </html>
+```
