@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,18 +5,20 @@
   <title>HealthFare Videos</title>
 
   <style>
-    body {
+    html, body {
       margin: 0;
+      height: 100%;
       background: white;
       font-family: Arial;
     }
 
+    /* TICKER */
     .ticker {
       width: 100%;
+      height: 60px;
       overflow: hidden;
       background: #f5f5f5;
       border-bottom: 1px solid #ddd;
-      height: 60px;
       display: flex;
       align-items: center;
     }
@@ -27,9 +28,9 @@
       font-size: 22px;
       font-weight: bold;
       color: #111;
-      display: inline-block;
       padding-left: 100%;
-      animation: scrollText 60s linear infinite;
+      display: inline-block;
+      animation: scrollText 90s linear infinite;
     }
 
     @keyframes scrollText {
@@ -37,12 +38,19 @@
       100% { transform: translateX(-100%); }
     }
 
+    /* VIDEO FULL AREA */
+    .video-container {
+      height: calc(100vh - 60px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     video {
-      width: 80%;
-      display: block;
-      margin: 30px auto;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: black;
     }
   </style>
 </head>
@@ -53,19 +61,21 @@
   <div class="ticker-text" id="tickerText"></div>
 </div>
 
-<video id="player" controls autoplay muted></video>
+<div class="video-container">
+  <video id="player" autoplay muted playsinline></video>
+</div>
 
 <script>
-/* LOAD MESSAGE */
+/* MESSAGE */
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
     const clean = text.trim();
-    // duplicate text so it loops smoothly
-    document.getElementById("tickerText").innerText = clean + " • " + clean + " • " + clean;
+    const repeated = (clean + " • ").repeat(10);
+    document.getElementById("tickerText").innerText = repeated;
   });
 
-/* VIDEO PLAYLIST */
+/* VIDEO */
 const player = document.getElementById("player");
 
 let videos = [];
@@ -80,15 +90,20 @@ fetch("links.csv")
       .map(l => l.replace(/\r/g, "").trim())
       .filter(l => l.startsWith("http"));
 
+    console.log("VIDEOS:", videos); // DEBUG
+
     if (videos.length > 0) {
       playVideo(0);
+    } else {
+      alert("No videos loaded - check links.csv");
     }
   });
 
 function playVideo(i) {
+  console.log("PLAYING:", videos[i]); // DEBUG
   player.src = videos[i];
   player.load();
-  player.play().catch(() => {});
+  player.play().catch(err => console.log("PLAY ERROR:", err));
 }
 
 player.addEventListener("ended", () => {
@@ -99,4 +114,3 @@ player.addEventListener("ended", () => {
 
 </body>
 </html>
-```
