@@ -11,7 +11,6 @@
       font-family: Arial;
     }
 
-    /* TOP SCROLLING TEXT BAR */
     .ticker {
       width: 100%;
       overflow: hidden;
@@ -27,7 +26,7 @@
       font-size: 22px;
       font-weight: bold;
       color: #111;
-      animation: scrollText 20s linear infinite;
+      animation: scrollText 40s linear infinite;
     }
 
     @keyframes scrollText {
@@ -35,7 +34,6 @@
       100% { transform: translateX(-100%); }
     }
 
-    /* VIDEO */
     video {
       width: 80%;
       display: block;
@@ -48,27 +46,21 @@
 
 <body>
 
-<!-- 🔥 SCROLLING TEXT -->
 <div class="ticker">
   <div class="ticker-text" id="tickerText"></div>
 </div>
 
-<!-- 🎥 VIDEO PLAYER -->
 <video id="player" controls autoplay></video>
 
 <script>
-/* =========================
-   LOAD MESSAGE FROM FILE
-========================= */
+/* LOAD MESSAGE */
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
     document.getElementById("tickerText").innerText = text;
   });
 
-/* =========================
-   VIDEO PLAYLIST FROM CSV
-========================= */
+/* VIDEO PLAYLIST */
 const player = document.getElementById("player");
 
 let videos = [];
@@ -78,8 +70,14 @@ fetch("links.csv")
   .then(res => res.text())
   .then(data => {
     const lines = data.split("\n").slice(1);
-    videos = lines.map(l => l.trim()).filter(l => l !== "");
-    playVideo(0);
+
+    videos = lines
+      .map(l => l.replace(/\r/g, "").trim())
+      .filter(l => l !== "");
+
+    if (videos.length > 0) {
+      playVideo(0);
+    }
   });
 
 function playVideo(i) {
