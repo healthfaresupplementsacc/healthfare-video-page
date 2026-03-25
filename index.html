@@ -9,9 +9,10 @@
       margin: 0;
       height: 100%;
       background: white;
-      font-family: Arial;
+      font-family: Arial, sans-serif;
     }
 
+    /* TOP SCROLLING TEXT */
     .ticker {
       width: 100%;
       height: 60px;
@@ -28,7 +29,7 @@
       font-weight: bold;
       color: #111;
       padding-left: 100%;
-      animation: scrollText 90s linear infinite;
+      animation: scrollText 120s linear infinite;
     }
 
     @keyframes scrollText {
@@ -36,8 +37,13 @@
       100% { transform: translateX(-100%); }
     }
 
+    /* VIDEO AREA */
     .video-container {
       height: calc(100vh - 60px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: black;
     }
 
     video {
@@ -51,28 +57,33 @@
 
 <body>
 
+<!-- 🔥 SCROLLING MESSAGE -->
 <div class="ticker">
   <div class="ticker-text" id="tickerText"></div>
 </div>
 
+<!-- 🎥 VIDEO PLAYER -->
 <div class="video-container">
-  <video id="player" autoplay muted playsinline controls></video>
+  <video id="player" muted playsinline controls></video>
 </div>
 
 <script>
-/* 🔥 IMPORTANT: YOUR R2 BASE URL */
-const BASE_URL = "https://pub-483bbe41ddb140cd940da5d8e7aaa8d1.r2.dev/";
-
-/* MESSAGE */
+/* =========================
+   LOAD MESSAGE
+========================= */
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
     const clean = text.trim();
+
+    // Repeat for smooth continuous scrolling
     document.getElementById("tickerText").innerText =
-      (clean + " • ").repeat(10);
+      (clean + " • ").repeat(15);
   });
 
-/* VIDEO */
+/* =========================
+   VIDEO PLAYLIST
+========================= */
 const player = document.getElementById("player");
 
 let videos = [];
@@ -84,25 +95,46 @@ fetch("links.csv")
     const lines = data.split(/\r?\n/).slice(1);
 
     videos = lines
-      .map(l => l.replace(/\r/g, "").trim())
-      .filter(l => l.length > 0);
+      .map(l => l.replace(/\r/g, "").replace(/"/g, "").trim())
+      .filter(l => l.startsWith("http"));
+
+    console.log("VIDEOS LOADED:", videos);
 
     if (videos.length > 0) {
       playVideo(0);
     } else {
-      alert("CSV loaded but empty");
+      alert("No valid videos found in CSV");
     }
   });
 
 function playVideo(i) {
-  const fullUrl = BASE_URL + encodeURIComponent(videos[i]);
-  console.log("PLAYING:", fullUrl);
+  const url = videos[i];
 
-  player.src = fullUrl;
+  console.log("PLAYING:", url);
+
+  player.src = url;
+  player.muted = true;
+  player.playsInline = true;
+
   player.load();
-  player.play().catch(() => {});
+
+  const promise = player.play();
+
+  if (promise !== undefined) {
+    promise
+      .then(() => {
+        console.log("Autoplay success");
+      })
+      .catch(() => {
+        console.log("Autoplay blocked, retrying...");
+        setTimeout(() => {
+          player.play().catch(() => {});
+        }, 500);
+      });
+  }
 }
 
+/* AUTO NEXT VIDEO */
 player.addEventListener("ended", () => {
   index = (index + 1) % videos.length;
   playVideo(index);
