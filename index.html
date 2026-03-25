@@ -1,94 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>HealthFare Videos</title>
-
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: white;
-      font-family: Arial, sans-serif;
-    }
-
-    /* TOP SCROLLING TEXT */
-    .ticker {
-      width: 100%;
-      height: 60px;
-      overflow: hidden;
-      background: #f5f5f5;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      align-items: center;
-    }
-
-    .ticker-text {
-      white-space: nowrap;
-      font-size: 22px;
-      font-weight: bold;
-      color: #111;
-      padding-left: 100%;
-      animation: scrollText 120s linear infinite;
-    }
-
-    @keyframes scrollText {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
-    /* VIDEO AREA */
-    .video-container {
-      height: calc(100vh - 60px);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: black;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: black;
-    }
-  </style>
-</head>
-
-<body>
-
-<!-- 🔥 SCROLLING MESSAGE -->
-<div class="ticker">
-  <div class="ticker-text" id="tickerText"></div>
-</div>
-
-<!-- 🎥 VIDEO PLAYER -->
-<div class="video-container">
-  <video id="player" muted playsinline controls></video>
-</div>
-
 <script>
-/* =========================
-   LOAD MESSAGE
-========================= */
-fetch("message.txt")
-  .then(res => res.text())
-  .then(text => {
-    const clean = text.trim();
-
-    // Repeat for smooth continuous scrolling
-    document.getElementById("tickerText").innerText =
-      (clean + " • ").repeat(15);
-  });
-
-/* =========================
-   VIDEO PLAYLIST
-========================= */
 const player = document.getElementById("player");
 
 let videos = [];
 let index = 0;
 
+/* LOAD CSV */
 fetch("links.csv")
   .then(res => res.text())
   .then(data => {
@@ -98,48 +14,51 @@ fetch("links.csv")
       .map(l => l.replace(/\r/g, "").replace(/"/g, "").trim())
       .filter(l => l.startsWith("http"));
 
-    console.log("VIDEOS LOADED:", videos);
+    videos = shuffleArray(videos); // 🔥 RANDOMIZE
 
     if (videos.length > 0) {
       playVideo(0);
     } else {
-      alert("No valid videos found in CSV");
+      alert("No valid videos");
     }
   });
 
 function playVideo(i) {
-  const url = videos[i];
+  if (!videos[i]) return;
 
-  console.log("PLAYING:", url);
+  console.log("PLAYING:", videos[i]);
 
-  player.src = url;
+  player.src = videos[i];
   player.muted = true;
-  player.playsInline = true;
-
   player.load();
 
-  const promise = player.play();
-
-  if (promise !== undefined) {
-    promise
-      .then(() => {
-        console.log("Autoplay success");
-      })
-      .catch(() => {
-        console.log("Autoplay blocked, retrying...");
-        setTimeout(() => {
-          player.play().catch(() => {});
-        }, 500);
-      });
-  }
+  player.play().catch(() => {
+    console.log("Play failed, skipping...");
+    nextVideo();
+  });
 }
 
-/* AUTO NEXT VIDEO */
-player.addEventListener("ended", () => {
+/* NEXT VIDEO */
+function nextVideo() {
   index = (index + 1) % videos.length;
   playVideo(index);
-});
-</script>
+}
 
-</body>
-</html>
+/* AUTO NEXT */
+player.addEventListener("ended", nextVideo);
+
+/* 🔥 HANDLE ERRORS (CRITICAL FIX) */
+player.addEventListener("error", () => {
+  console.log("Video error, skipping...");
+  nextVideo();
+});
+
+/* SHUFFLE */
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+</script>
