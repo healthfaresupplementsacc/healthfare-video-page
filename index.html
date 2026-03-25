@@ -1,10 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HealthFare Videos</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .ticker {
+      width: 100%;
+      height: 60px;
+      overflow: hidden;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+    }
+
+    .ticker-text {
+      white-space: nowrap;
+      font-size: 22px;
+      font-weight: bold;
+      color: #111;
+      padding-left: 100%;
+      animation: scrollText 120s linear infinite;
+    }
+
+    @keyframes scrollText {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .video-container {
+      height: calc(100vh - 60px);
+      background: black;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: black;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="ticker">
+  <div class="ticker-text" id="tickerText"></div>
+</div>
+
+<div class="video-container">
+  <video id="player" muted playsinline></video>
+</div>
+
 <script>
 const player = document.getElementById("player");
 
 let videos = [];
 let index = 0;
+let retryCount = 0;
 
-/* LOAD CSV */
+/* LOAD MESSAGE */
+fetch("message.txt")
+  .then(res => res.text())
+  .then(text => {
+    const clean = text.trim();
+    document.getElementById("tickerText").innerText =
+      (clean + " • ").repeat(15);
+  });
+
+/* LOAD VIDEOS */
 fetch("links.csv")
   .then(res => res.text())
   .then(data => {
@@ -14,47 +86,71 @@ fetch("links.csv")
       .map(l => l.replace(/\r/g, "").replace(/"/g, "").trim())
       .filter(l => l.startsWith("http"));
 
-    videos = shuffleArray(videos); // 🔥 RANDOMIZE
+    videos = shuffle(videos);
+
+    console.log("VIDEOS:", videos);
 
     if (videos.length > 0) {
       playVideo(0);
     } else {
-      alert("No valid videos");
+      alert("No valid videos found");
     }
   });
 
 function playVideo(i) {
-  if (!videos[i]) return;
+  if (!videos[i]) {
+    nextVideo();
+    return;
+  }
 
-  console.log("PLAYING:", videos[i]);
+  const url = videos[i];
+  console.log("PLAYING:", url);
 
-  player.src = videos[i];
-  player.muted = true;
+  player.src = url;
   player.load();
 
+  retryCount = 0;
+
+  tryPlay();
+}
+
+function tryPlay() {
   player.play().catch(() => {
-    console.log("Play failed, skipping...");
-    nextVideo();
+    retryCount++;
+
+    if (retryCount < 3) {
+      console.log("Retrying play...");
+      setTimeout(tryPlay, 500);
+    } else {
+      console.log("Skipping video...");
+      nextVideo();
+    }
   });
 }
 
-/* NEXT VIDEO */
 function nextVideo() {
   index = (index + 1) % videos.length;
   playVideo(index);
 }
 
-/* AUTO NEXT */
+/* EVENTS */
 player.addEventListener("ended", nextVideo);
 
-/* 🔥 HANDLE ERRORS (CRITICAL FIX) */
 player.addEventListener("error", () => {
-  console.log("Video error, skipping...");
+  console.log("Error loading video, skipping...");
   nextVideo();
 });
 
+/* SAFETY TIMER (if video freezes) */
+setInterval(() => {
+  if (player.readyState === 0 || player.paused) {
+    console.log("Video stalled, forcing next...");
+    nextVideo();
+  }
+}, 8000);
+
 /* SHUFFLE */
-function shuffleArray(array) {
+function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
@@ -62,3 +158,6 @@ function shuffleArray(array) {
   return array;
 }
 </script>
+
+</body>
+</html>
