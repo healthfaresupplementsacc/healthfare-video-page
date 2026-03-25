@@ -71,8 +71,8 @@ fetch("message.txt")
   .then(res => res.text())
   .then(text => {
     const clean = text.trim();
-    const repeated = (clean + " • ").repeat(10);
-    document.getElementById("tickerText").innerText = repeated;
+    document.getElementById("tickerText").innerText =
+      (clean + " • ").repeat(10);
   });
 
 /* VIDEO */
@@ -90,8 +90,6 @@ fetch("links.csv")
       .map(l => l.replace(/\r/g, "").trim())
       .filter(l => l.startsWith("http"));
 
-    console.log("VIDEOS:", videos); // DEBUG
-
     if (videos.length > 0) {
       playVideo(0);
     } else {
@@ -100,10 +98,9 @@ fetch("links.csv")
   });
 
 function playVideo(i) {
-  console.log("PLAYING:", videos[i]); // DEBUG
-  player.src = videos[i];
+  player.src = encodeURI(videos[i]);
   player.load();
-  player.play().catch(err => console.log("PLAY ERROR:", err));
+  player.play().catch(() => {});
 }
 
 player.addEventListener("ended", () => {
