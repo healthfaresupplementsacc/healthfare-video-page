@@ -12,31 +12,31 @@
       font-family: Arial, sans-serif;
     }
 
+    /* ---------- TICKER ---------- */
     .ticker {
       width: 100%;
-      height: 60px;
+      height: 90px; /* bigger bar */
       overflow: hidden;
       background: #f5f5f5;
       border-bottom: 1px solid #ddd;
       display: flex;
       align-items: center;
+      position: relative;
+      padding-left: 20px;
     }
 
     .ticker-text {
+      position: absolute;
       white-space: nowrap;
-      font-size: 22px;
-      font-weight: bold;
-      padding-left: 100%;
-      animation: scrollText 120s linear infinite;
+      font-size: 32px; /* 🔥 increased from 22 → 32 */
+      font-weight: 600;
+      color: #111;
+      letter-spacing: 0.5px;
     }
 
-    @keyframes scrollText {
-      0% { transform: translateX(0); }
-      100% { transform: translateX(-100%); }
-    }
-
+    /* ---------- VIDEO ---------- */
     .video-container {
-      height: calc(100vh - 60px);
+      height: calc(100vh - 90px); /* match new ticker height */
       background: black;
     }
 
@@ -56,24 +56,47 @@
 </div>
 
 <div class="video-container">
-  <video id="player" muted playsinline></video>
+  <video id="player" muted playsinline autoplay></video>
 </div>
 
 <script>
 const player = document.getElementById("player");
+const ticker = document.getElementById("tickerText");
 
 let videos = [];
 let index = 0;
 
-/* MESSAGE */
+/* ---------------- TICKER ---------------- */
+
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
-    document.getElementById("tickerText").innerText =
-      (text.trim() + " • ").repeat(15);
+    const content = (text.trim() + "   •   ").repeat(20);
+    ticker.innerText = content;
+    startTicker();
   });
 
-/* 🔥 FIX BROKEN ENCODING */
+function startTicker() {
+  const speed = 0.4; // slightly slower for bigger text
+
+  let position = window.innerWidth;
+
+  function animate() {
+    position -= speed;
+
+    if (position < -ticker.scrollWidth) {
+      position = window.innerWidth;
+    }
+
+    ticker.style.transform = `translateX(${position}px)`;
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+}
+
+/* ---------------- VIDEO SYSTEM ---------------- */
+
 function fixUrl(url) {
   return url
     .replace(/%E2%94%9C%C2%BA%E2%94%9C%C3%BA/g, "%C3%A7%C3%A3")
@@ -82,18 +105,15 @@ function fixUrl(url) {
     .replace(/\.{2}\.mp4/g, ".mp4");
 }
 
-/* 🔥 VALIDATE VIDEO BEFORE USING */
 function checkVideo(url) {
   return new Promise(resolve => {
     const v = document.createElement("video");
     v.src = url;
-
     v.onloadeddata = () => resolve(true);
     v.onerror = () => resolve(false);
   });
 }
 
-/* LOAD CSV */
 fetch("links.csv")
   .then(res => res.text())
   .then(async data => {
@@ -104,19 +124,10 @@ fetch("links.csv")
       .filter(l => l.length > 10)
       .map(fixUrl);
 
-    console.log("Checking videos...");
-
     for (let url of rawVideos) {
       const ok = await checkVideo(url);
-      if (ok) {
-        videos.push(url);
-        console.log("VALID:", url);
-      } else {
-        console.log("BROKEN:", url);
-      }
+      if (ok) videos.push(url);
     }
-
-    console.log("FINAL PLAYLIST:", videos.length);
 
     videos = shuffle(videos);
 
@@ -133,7 +144,9 @@ function playVideo(i) {
   player.src = videos[i];
   player.load();
 
-  player.play().catch(() => nextVideo());
+  player.play().catch(() => {
+    setTimeout(nextVideo, 500);
+  });
 }
 
 function nextVideo() {
@@ -142,8 +155,14 @@ function nextVideo() {
 }
 
 player.addEventListener("ended", nextVideo);
-
 player.addEventListener("error", nextVideo);
+
+/* FAILSAFE */
+setInterval(() => {
+  if (player.paused || player.readyState === 0) {
+    nextVideo();
+  }
+}, 8000);
 
 /* SHUFFLE */
 function shuffle(array) {
