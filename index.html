@@ -26,7 +26,6 @@
       white-space: nowrap;
       font-size: 22px;
       font-weight: bold;
-      color: #111;
       padding-left: 100%;
       animation: scrollText 120s linear infinite;
     }
@@ -65,66 +64,57 @@ const player = document.getElementById("player");
 
 let videos = [];
 let index = 0;
-let retryCount = 0;
 
-/* LOAD MESSAGE */
+/* MESSAGE */
 fetch("message.txt")
   .then(res => res.text())
   .then(text => {
-    const clean = text.trim();
     document.getElementById("tickerText").innerText =
-      (clean + " • ").repeat(15);
+      (text.trim() + " • ").repeat(15);
   });
 
-/* LOAD VIDEOS */
+/* 🔥 FIX BROKEN ENCODING */
+function fixUrl(url) {
+  return url
+    .replace(/%E2%94%9C%C2%BA%E2%94%9C%C3%BA/g, "%C3%A7%C3%A3") // Narração fix
+    .replace(/%E2%94%9C%C2%BA/g, "%C3%A7") // fallback
+    .replace(/%E2%94%9C%C3%BA/g, "%C3%A3") // fallback
+    .replace(/%20%20/g, "%20") // double space fix
+    .replace(/\.{2}\.mp4/g, ".mp4"); // double dot fix
+}
+
+/* LOAD CSV */
 fetch("links.csv")
   .then(res => res.text())
   .then(data => {
     const lines = data.split(/\r?\n/).slice(1);
 
     videos = lines
-      .map(l => l.replace(/\r/g, "").replace(/"/g, "").trim())
-      .filter(l => l.startsWith("http"));
+      .map(l => l.replace(/"/g, "").trim())
+      .filter(l => l.length > 10)
+      .map(fixUrl); // 🔥 APPLY FIX HERE
 
     videos = shuffle(videos);
 
-    console.log("VIDEOS:", videos);
+    console.log("TOTAL VIDEOS:", videos.length);
 
     if (videos.length > 0) {
       playVideo(0);
-    } else {
-      alert("No valid videos found");
     }
   });
 
 function playVideo(i) {
-  if (!videos[i]) {
-    nextVideo();
-    return;
-  }
+  if (!videos[i]) return nextVideo();
 
   const url = videos[i];
+
   console.log("PLAYING:", url);
 
   player.src = url;
   player.load();
 
-  retryCount = 0;
-
-  tryPlay();
-}
-
-function tryPlay() {
   player.play().catch(() => {
-    retryCount++;
-
-    if (retryCount < 3) {
-      console.log("Retrying play...");
-      setTimeout(tryPlay, 500);
-    } else {
-      console.log("Skipping video...");
-      nextVideo();
-    }
+    setTimeout(nextVideo, 500);
   });
 }
 
@@ -137,14 +127,13 @@ function nextVideo() {
 player.addEventListener("ended", nextVideo);
 
 player.addEventListener("error", () => {
-  console.log("Error loading video, skipping...");
+  console.log("ERROR SKIP");
   nextVideo();
 });
 
-/* SAFETY TIMER (if video freezes) */
+/* FAILSAFE */
 setInterval(() => {
-  if (player.readyState === 0 || player.paused) {
-    console.log("Video stalled, forcing next...");
+  if (player.paused || player.readyState === 0) {
     nextVideo();
   }
 }, 8000);
