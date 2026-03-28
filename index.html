@@ -1,3 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HealthFare Videos</title>
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: black;
+      font-family: Arial, sans-serif;
+    }
+
+    /* VIDEO */
+    .video-container {
+      height: 100vh;
+      width: 100%;
+      position: relative;
+      background: black;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: black;
+    }
+
+    /* TICKER */
+    .ticker {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 12vh;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      padding-left: 2vw;
+    }
+
+    .ticker-text {
+      position: absolute;
+      white-space: nowrap;
+
+      font-size: clamp(32px, 4vw, 90px);
+      font-weight: 700;
+      color: white;
+      letter-spacing: 1px;
+
+      will-change: transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="video-container">
+  <video id="player" muted playsinline autoplay></video>
+
+  <div class="ticker">
+    <div class="ticker-text" id="tickerText"></div>
+  </div>
+</div>
+
 <script>
 const player = document.getElementById("player");
 const ticker = document.getElementById("tickerText");
@@ -6,7 +74,7 @@ let videos = [];
 let index = 0;
 let lastProgress = Date.now();
 
-/* ---------------- TICKER ---------------- */
+/* ---------- TICKER ---------- */
 
 fetch("message.txt?v=" + Date.now())
   .then(res => res.text())
@@ -14,7 +82,8 @@ fetch("message.txt?v=" + Date.now())
     const content = (text.trim() + "     •     ").repeat(20);
     ticker.innerText = content;
     startTicker();
-  });
+  })
+  .catch(err => console.log("Ticker error:", err));
 
 function startTicker() {
   const speed = 200;
@@ -32,8 +101,7 @@ function startTicker() {
       position = window.innerWidth;
     }
 
-    const rounded = Math.round(position);
-    ticker.style.transform = `translate3d(${rounded}px, 0, 0)`;
+    ticker.style.transform = `translate3d(${Math.round(position)}px,0,0)`;
 
     requestAnimationFrame(animate);
   }
@@ -41,40 +109,47 @@ function startTicker() {
   requestAnimationFrame(animate);
 }
 
-/* ---------------- VIDEO SYSTEM ---------------- */
+/* ---------- VIDEO SYSTEM ---------- */
 
-/* CLEAN URL FIX */
-function fixUrl(url) {
+function cleanUrl(url) {
   return url
+    .replace(/"/g, "")
     .replace(/\.{2}\.mp4/g, ".mp4")
     .trim();
 }
 
-/* LOAD VIDEOS (NO VALIDATION) */
 fetch("links.csv?v=" + Date.now())
   .then(res => res.text())
   .then(data => {
-    const lines = data.split(/\r?\n/).slice(1);
+
+    const lines = data.split(/\r?\n/);
 
     videos = lines
-      .map(l => l.replace(/"/g, "").trim())
-      .filter(l => l.length > 10)
-      .map(fixUrl);
+      .slice(1)
+      .map(cleanUrl)
+      .filter(l => l.startsWith("http"));
+
+    console.log("VIDEOS FOUND:", videos.length);
+
+    if (videos.length === 0) {
+      alert("No valid videos found");
+      return;
+    }
 
     videos = shuffle(videos);
 
-    if (videos.length > 0) {
-      playVideo(0);
-    } else {
-      alert("No videos found");
-    }
+    playVideo(0);
+  })
+  .catch(err => {
+    console.error("CSV ERROR:", err);
+    alert("Error loading links.csv");
   });
 
-/* STRONG PLAY FUNCTION */
 function playVideo(i) {
   if (!videos[i]) return nextVideo();
 
   const url = videos[i];
+
   console.log("PLAYING:", url);
 
   player.src = url;
@@ -85,22 +160,19 @@ function playVideo(i) {
   }, 200);
 }
 
-/* NEXT */
 function nextVideo() {
   index = (index + 1) % videos.length;
   playVideo(index);
 }
 
-/* EVENTS */
 player.addEventListener("ended", nextVideo);
 player.addEventListener("error", nextVideo);
 
-/* TRACK PROGRESS */
 player.addEventListener("timeupdate", () => {
   lastProgress = Date.now();
 });
 
-/* DETECT FREEZE */
+/* FREEZE DETECTION */
 setInterval(() => {
   if (Date.now() - lastProgress > 7000) {
     console.log("Frozen → skipping");
@@ -117,3 +189,6 @@ function shuffle(array) {
   return array;
 }
 </script>
+
+</body>
+</html>
