@@ -1,79 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>HealthFare Videos</title>
-
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-      background: black;
-      font-family: Arial, sans-serif;
-    }
-
-    /* ---------- VIDEO FULL SCREEN ---------- */
-    .video-container {
-      height: 100vh;
-      width: 100%;
-      position: relative;
-      background: black;
-    }
-
-    video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: black;
-    }
-
-    /* ---------- BOTTOM TICKER ---------- */
-    .ticker {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 12vh; /* responsive height */
-      background: rgba(0,0,0,0.75);
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-      padding-left: 2vw;
-    }
-
-    .ticker-text {
-      position: absolute;
-      white-space: nowrap;
-
-      /* 🔥 RESPONSIVE TEXT SIZE */
-      font-size: clamp(28px, 4vw, 80px);
-
-      font-weight: 700;
-      color: white;
-      letter-spacing: 1px;
-
-      will-change: transform;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-  </style>
-</head>
-
-<body>
-
-<div class="video-container">
-  <video id="player" muted playsinline autoplay></video>
-
-  <div class="ticker">
-    <div class="ticker-text" id="tickerText"></div>
-  </div>
-</div>
-
 <script>
 const player = document.getElementById("player");
 const ticker = document.getElementById("tickerText");
 
 let videos = [];
 let index = 0;
+let lastProgress = Date.now();
 
 /* ---------------- TICKER ---------------- */
 
@@ -86,7 +17,7 @@ fetch("message.txt?v=" + Date.now())
   });
 
 function startTicker() {
-  const speed = 200; // 🔥 slightly faster for big screens
+  const speed = 200;
 
   let position = window.innerWidth;
   let lastTime = performance.now();
@@ -102,7 +33,6 @@ function startTicker() {
     }
 
     const rounded = Math.round(position);
-
     ticker.style.transform = `translate3d(${rounded}px, 0, 0)`;
 
     requestAnimationFrame(animate);
@@ -113,72 +43,70 @@ function startTicker() {
 
 /* ---------------- VIDEO SYSTEM ---------------- */
 
+/* CLEAN URL FIX */
 function fixUrl(url) {
   return url
-    .replace(/%E2%94%9C%C2%BA%E2%94%9C%C3%BA/g, "%C3%A7%C3%A3")
-    .replace(/%E2%94%9C%C2%BA/g, "%C3%A7")
-    .replace(/%E2%94%9C%C3%BA/g, "%C3%A3")
-    .replace(/\.{2}\.mp4/g, ".mp4");
+    .replace(/\.{2}\.mp4/g, ".mp4")
+    .trim();
 }
 
-function checkVideo(url) {
-  return new Promise(resolve => {
-    const v = document.createElement("video");
-    v.src = url;
-    v.onloadeddata = () => resolve(true);
-    v.onerror = () => resolve(false);
-  });
-}
-
+/* LOAD VIDEOS (NO VALIDATION) */
 fetch("links.csv?v=" + Date.now())
   .then(res => res.text())
-  .then(async data => {
+  .then(data => {
     const lines = data.split(/\r?\n/).slice(1);
 
-    const rawVideos = lines
+    videos = lines
       .map(l => l.replace(/"/g, "").trim())
       .filter(l => l.length > 10)
       .map(fixUrl);
-
-    for (let url of rawVideos) {
-      const ok = await checkVideo(url);
-      if (ok) videos.push(url);
-    }
 
     videos = shuffle(videos);
 
     if (videos.length > 0) {
       playVideo(0);
     } else {
-      alert("No valid videos found");
+      alert("No videos found");
     }
   });
 
+/* STRONG PLAY FUNCTION */
 function playVideo(i) {
   if (!videos[i]) return nextVideo();
 
-  player.src = videos[i];
+  const url = videos[i];
+  console.log("PLAYING:", url);
+
+  player.src = url;
   player.load();
 
-  player.play().catch(() => {
-    setTimeout(nextVideo, 500);
-  });
+  setTimeout(() => {
+    player.play().catch(() => nextVideo());
+  }, 200);
 }
 
+/* NEXT */
 function nextVideo() {
   index = (index + 1) % videos.length;
   playVideo(index);
 }
 
+/* EVENTS */
 player.addEventListener("ended", nextVideo);
 player.addEventListener("error", nextVideo);
 
-/* FAILSAFE */
+/* TRACK PROGRESS */
+player.addEventListener("timeupdate", () => {
+  lastProgress = Date.now();
+});
+
+/* DETECT FREEZE */
 setInterval(() => {
-  if (player.paused || player.readyState === 0) {
+  if (Date.now() - lastProgress > 7000) {
+    console.log("Frozen → skipping");
     nextVideo();
   }
-}, 8000);
+}, 3000);
 
 /* SHUFFLE */
 function shuffle(array) {
@@ -189,6 +117,3 @@ function shuffle(array) {
   return array;
 }
 </script>
-
-</body>
-</html>
